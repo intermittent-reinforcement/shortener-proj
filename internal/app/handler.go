@@ -9,7 +9,7 @@ import (
 	"strings"
 )
 
-//const serverURL string = "http://localhost:8080/"
+const serverURL string = "http://localhost:8080/"
 
 var idMap = make(map[string]string)
 
