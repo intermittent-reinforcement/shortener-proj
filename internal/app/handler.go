@@ -1,23 +1,26 @@
 package app
 
 import (
-	"net/http"
-	"strings"
-
+	//"fmt"
+	//"fmt"
 	"io"
+	"net/http"
 	"net/url"
+	"strings"
 )
 
-const serverURL string = "http://localhost:8080/"
+//const serverURL string = "http://localhost:8080/"
 
 var idMap = make(map[string]string)
 
 func RootRouter(res http.ResponseWriter, req *http.Request) {
+
 	// Check path and method to route to corresponding function
-	if req.URL.Path == "/" && req.Method == http.MethodPost {
+	if req.Method == http.MethodPost && req.URL.Path == "/" {
 		PostShortURL(res, req)
-	} else if req.Method == http.MethodGet && req.URL.Path != "/" {
+	} else if req.Method == http.MethodGet && req.URL.Path == "/" {
 		GetOrigPageRedir(res, req)
+		//fmt.Println("LALALA2", res.Header())
 	} else {
 		res.WriteHeader(http.StatusBadRequest)
 	}
@@ -38,6 +41,7 @@ func PostShortURL(res http.ResponseWriter, req *http.Request) {
 	}
 	// // Get ID for Original URL
 	id := GenerateID(origURL)
+	serverURL := req.URL.String()
 	shortURL := serverURL + id
 	// // If ID does not exist - write that to idMap
 	if _, exists := idMap[id]; !exists {
@@ -52,14 +56,17 @@ func PostShortURL(res http.ResponseWriter, req *http.Request) {
 
 func GetOrigPageRedir(res http.ResponseWriter, req *http.Request) {
 	// Get hash from GET request URL Path
-	hash := strings.TrimPrefix(req.URL.Path, "/")
+	reqRawURLToString := req.URL.String()
+	hash := strings.TrimPrefix(reqRawURLToString, "/")
+	//fmt.Println(hash, " ", idMap)
 
 	// Check if hash exists in idMap (aka original URL is stored)
 	origURL, exists := idMap[hash]
 	if exists {
-		res.Header().Set("Location", origURL)
 		res.WriteHeader(http.StatusTemporaryRedirect)
+		res.Header().Set("Location", origURL)
 	} else {
 		res.WriteHeader(http.StatusBadRequest)
 	}
+	//fmt.Println("LALALA1", res.Header())
 }
