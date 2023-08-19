@@ -1,150 +1,138 @@
 package app
 
 import (
-	//	"fmt"
+	//"fmt"
 	"net/http"
+
+	"io"
 	"net/http/httptest"
 
-	//"strings"
+	"strings"
 
 	//"strings"
 	"testing"
-
-	"github.com/go-resty/resty/v2"
+	//"github.com/go-resty/resty/v2"
 	"github.com/stretchr/testify/assert"
-	//"github.com/stretchr/testify/require"
+	"github.com/stretchr/testify/require"
 )
 
+func testRequest(t *testing.T, ts *httptest.Server, method, path string) (*http.Response, string) {
+	req, err := http.NewRequest(method, ts.URL+path, nil)
+	require.NoError(t, err)
+
+	resp, err := ts.Client().Do(req)
+	require.NoError(t, err)
+	defer resp.Body.Close()
+
+	respBody, err := io.ReadAll(resp.Body)
+	require.NoError(t, err)
+
+	return resp, string(respBody)
+}
+
 func TestPostShortUrl(t *testing.T) {
-
-	handler := http.HandlerFunc(PostShortURL)
-
-	srv := httptest.NewServer(handler)
-
-	defer srv.Close()
 
 	tests := []struct {
 		name        string
 		code        int
 		method      string
 		requestBody string
+		contentType string
 	}{
 		{
 			name:        "positive test POST",
 			code:        201,
 			method:      http.MethodPost,
-			requestBody: "https://google.com/",
+			requestBody: "https://practicum.yandex.ru/",
+			contentType: "text/plain",
 		},
 		{
-			name:        "negative PUT",
+			name:        "negative Post",
 			code:        400,
-			method:      http.MethodPut,
-			requestBody: "",
+			method:      http.MethodPost,
+			requestBody: "hflwe",
+			contentType: "",
 		},
-		{
-			name:        "negative DELETE",
-			code:        400,
-			method:      http.MethodDelete,
-			requestBody: "",
-		},
+		// {
+		// 	name:        "negative DELETE",
+		// 	code:        400,
+		// 	method:      http.MethodDelete,
+		// 	requestBody: "",
+		// 	contentType: "",
+		// },
 	}
 	for _, test := range tests {
-
-		req := resty.New().R()
-		req.Method = test.method
-		req.URL = srv.URL
-		//	fmt.Println(srv.URL)
-		req.Body = test.requestBody
-		resp, err := req.Send()
-
-		assert.NoError(t, err, "error making HTTP request")
-		assert.Equal(t, test.code, resp.StatusCode(), "Response code didn't match expected")
-
+		t.Run(test.name, func(t *testing.T) {
+			request := httptest.NewRequest(test.method, "/", strings.NewReader(test.requestBody))
+			responseRecorder := httptest.NewRecorder()
+			PostShortURL(responseRecorder, request)
+			tRequestResult := responseRecorder.Result()
+			assert.Equal(t, tRequestResult.StatusCode, test.code)
+			defer tRequestResult.Body.Close()
+			_, err := io.ReadAll(responseRecorder.Body)
+			require.NoError(t, err)
+			assert.Equal(t, tRequestResult.Header.Get("Content-Type"), test.contentType)
+		})
 	}
 }
 
 func TestRootRouter(t *testing.T) {
-	handler := http.HandlerFunc(RootRouter)
-
-	srv := httptest.NewServer(handler)
-
-	defer srv.Close()
+	testServer := httptest.NewServer(RootRouter())
+	defer testServer.Close()
 
 	testCases := []struct {
 		method string
+		url    string
 	}{
-		{method: http.MethodGet},
-		{method: http.MethodPut},
-		{method: http.MethodDelete},
-		{method: http.MethodPost},
+		{method: http.MethodPost, url: "/"},
+		{method: http.MethodGet, url: "/TGktgzJr"},
+		{method: http.MethodPut, url: "/"},
+		{method: http.MethodDelete, url: "/"},
 	}
-	for _, tc := range testCases {
-		t.Run(tc.method, func(t *testing.T) {
-
-			req := resty.New().R()
-			req.Method = tc.method
-			req.URL = srv.URL
-			//fmt.Println(req.URL)
-			_, err := req.Send()
-			if err != nil {
-				panic(err)
-			}
-			assert.NoError(t, err, "error making HTTP request")
-			assert.Equal(t, tc.method, req.Method, "error")
-			//fmt.Println(idMap)
-		})
+	for _, testCase := range testCases {
+		resp, _ := testRequest(t, testServer, testCase.method, testCase.url)
+		assert.Equal(t, testCase.method, resp.Request.Method)
 	}
 }
 
 func TestGetOrigPageRedir(t *testing.T) {
 
-	http.HandleFunc("/", PostShortURL)
-	//fmt.Println(idMap)
-	handler := http.HandlerFunc(GetOrigPageRedir)
-
-	srv := httptest.NewServer(handler)
-
-	defer srv.Close()
-
 	tests := []struct {
-		name string
-		code int
-		//location string
-		method string
-		reqURL string
+		name     string
+		code     int
+		location string
+		method   string
+		reqURL   string
 	}{
 		{
-			name:   "positive test GET",
-			code:   307,
-			reqURL: "/TGktgzJr",
-			//location: "https://google.com/",
-			method: http.MethodGet,
+			name:     "positive test Get",
+			code:     307,
+			reqURL:   "http://localhost:8080/UwaF9CSP",
+			location: "https://practicum.yandex.ru/",
+			method:   http.MethodGet,
 		},
 		{
-			name: "negative PUT",
-			code: 400,
-			//location: "",
-			reqURL: "/UwaF9CSP",
-			method: http.MethodPut,
+			name:     "negative Get",
+			code:     400,
+			reqURL:   "http://localhost:8080/fhifgln",
+			location: "",
+			method:   http.MethodGet,
 		},
 		{
-			name: "negative DELETE",
-			code: 400,
-			//location: "",
-			reqURL: "/UwaF9CSP",
-			method: http.MethodDelete,
+			name:     "negative Get",
+			code:     400,
+			reqURL:   "http://localhost:8080/inluih",
+			location: "",
+			method:   http.MethodGet,
 		},
 	}
 	for _, test := range tests {
-		req := resty.New().R()
-		req.Method = test.method
-		req.URL = srv.URL + test.reqURL
-		//req.R().SetPathParams
-		//fmt.Println(req.URL)
-		resp, err := req.Send()
-		assert.NoError(t, err, "error making HTTP request")
-		//assert.Equal(t, test.location, resp.Header().Get("Location"), "ty loh")
-		//fmt.Println(resp.Header().Get("Location"))
-		assert.Equal(t, test.code, resp.StatusCode(), "Response code didn't match expected")
+		request := httptest.NewRequest(http.MethodGet, "http://localhost:8080/UwaF9CSP", nil)
+		resp := httptest.NewRecorder()
+		GetOrigPageRedir(resp, request)
+		respres := resp.Result()
+		assert.Equal(t, test.code, respres.StatusCode)
+		defer respres.Body.Close()
+		assert.Equal(t, test.location, resp.Header().Get("Location"))
 	}
 }
