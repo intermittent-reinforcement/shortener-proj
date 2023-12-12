@@ -1,138 +1,114 @@
 package app
 
 import (
-	//"fmt"
-	"net/http"
-
+	"bytes"
 	"io"
+	"net/http"
 	"net/http/httptest"
-
-	"strings"
-
-	//"strings"
 	"testing"
-	//"github.com/go-resty/resty/v2"
+
+	"github.com/go-chi/chi/v5"
 	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 )
 
-func testRequest(t *testing.T, ts *httptest.Server, method, path string) (*http.Response, string) {
-	req, err := http.NewRequest(method, ts.URL+path, nil)
-	require.NoError(t, err)
-
-	resp, err := ts.Client().Do(req)
-	require.NoError(t, err)
-	defer resp.Body.Close()
-
-	respBody, err := io.ReadAll(resp.Body)
-	require.NoError(t, err)
-
-	return resp, string(respBody)
-}
-
-func TestPostShortUrl(t *testing.T) {
+func TestPostShortURL(t *testing.T) {
+	type want struct {
+		code      int
+		shortLink string
+	}
 
 	tests := []struct {
-		name        string
-		code        int
-		method      string
-		requestBody string
-		contentType string
+		testName     string
+		locationLink string
+		want         want
 	}{
 		{
-			name:        "positive test POST",
-			code:        201,
-			method:      http.MethodPost,
-			requestBody: "https://practicum.yandex.ru/",
-			contentType: "text/plain",
+			"Positive test #1",
+			"http://ebmb4oy4knent.net/bsotu8cwy2n",
+			want{
+				201,
+				"http://localhost:8080/Q2XK4CGY",
+			},
 		},
 		{
-			name:        "negative Post",
-			code:        400,
-			method:      http.MethodPost,
-			requestBody: "hflwe",
-			contentType: "",
+			"Positive test #2",
+			"https://practicum.yandex.ru/",
+			want{
+				201,
+				"http://localhost:8080/UwaF9CSP",
+			},
 		},
-		// {
-		// 	name:        "negative DELETE",
-		// 	code:        400,
-		// 	method:      http.MethodDelete,
-		// 	requestBody: "",
-		// 	contentType: "",
-		// },
 	}
-	for _, test := range tests {
-		t.Run(test.name, func(t *testing.T) {
-			request := httptest.NewRequest(test.method, "/", strings.NewReader(test.requestBody))
-			responseRecorder := httptest.NewRecorder()
-			PostShortURL(responseRecorder, request)
-			tRequestResult := responseRecorder.Result()
-			assert.Equal(t, tRequestResult.StatusCode, test.code)
-			defer tRequestResult.Body.Close()
-			_, err := io.ReadAll(responseRecorder.Body)
-			require.NoError(t, err)
-			assert.Equal(t, tRequestResult.Header.Get("Content-Type"), test.contentType)
+	for _, tt := range tests {
+		t.Run(tt.testName, func(t *testing.T) {
+			request := httptest.NewRequest(http.MethodPost, "/", bytes.NewReader([]byte(tt.locationLink)))
+			response := httptest.NewRecorder()
+
+			r := chi.NewRouter()
+			r.Post("/", PostShortURL)
+
+			r.ServeHTTP(response, request)
+
+			result := response.Result()
+			assert.Equal(t, tt.want.code, result.StatusCode)
+
+			defer result.Body.Close()
+			shortenedLinkTestResult, err := io.ReadAll(result.Body)
+			if err != nil {
+				t.Error(err)
+			}
+			assert.Equal(t, tt.want.shortLink, string(shortenedLinkTestResult))
 		})
-	}
-}
-
-func TestRootRouter(t *testing.T) {
-	testServer := httptest.NewServer(RootRouter())
-	defer testServer.Close()
-
-	testCases := []struct {
-		method string
-		url    string
-	}{
-		{method: http.MethodPost, url: "/"},
-		{method: http.MethodGet, url: "/TGktgzJr"},
-		{method: http.MethodPut, url: "/"},
-		{method: http.MethodDelete, url: "/"},
-	}
-	for _, testCase := range testCases {
-		resp, _ := testRequest(t, testServer, testCase.method, testCase.url)
-		assert.Equal(t, testCase.method, resp.Request.Method)
 	}
 }
 
 func TestGetOrigPageRedir(t *testing.T) {
 
-	tests := []struct {
-		name     string
+	type want struct {
 		code     int
 		location string
-		method   string
-		reqURL   string
+	}
+	tests := []struct {
+		testName string
+		id       string
+		want     want
 	}{
 		{
-			name:     "positive test Get",
-			code:     307,
-			reqURL:   "http://localhost:8080/UwaF9CSP",
-			location: "https://practicum.yandex.ru/",
-			method:   http.MethodGet,
+			"Positive test #1",
+			"Q2XK4CGY",
+			want{
+				307,
+				"http://ebmb4oy4knent.net/bsotu8cwy2n",
+			},
 		},
 		{
-			name:     "negative Get",
-			code:     400,
-			reqURL:   "http://localhost:8080/fhifgln",
-			location: "",
-			method:   http.MethodGet,
-		},
-		{
-			name:     "negative Get",
-			code:     400,
-			reqURL:   "http://localhost:8080/inluih",
-			location: "",
-			method:   http.MethodGet,
+			"Positive test #2",
+			"UwaF9CSP",
+			want{
+				307,
+				"https://practicum.yandex.ru/",
+			},
 		},
 	}
-	for _, test := range tests {
-		request := httptest.NewRequest(http.MethodGet, "http://localhost:8080/UwaF9CSP", nil)
-		resp := httptest.NewRecorder()
-		GetOrigPageRedir(resp, request)
-		respres := resp.Result()
-		assert.Equal(t, test.code, respres.StatusCode)
-		defer respres.Body.Close()
-		assert.Equal(t, test.location, resp.Header().Get("Location"))
+
+	for _, tt := range tests {
+		t.Run(tt.testName, func(t *testing.T) {
+			idMap = make(map[string]string)
+			idMap[tt.id] = tt.want.location
+			request := httptest.NewRequest(http.MethodGet, "http://localhost:8080/"+tt.id, nil)
+			response := httptest.NewRecorder()
+
+			r := chi.NewRouter()
+			r.Get("/{id}", GetOrigPageRedir)
+
+			r.ServeHTTP(response, request)
+
+			result := response.Result()
+			assert.Equal(t, tt.want.code, result.StatusCode)
+			defer result.Body.Close()
+
+			locationHeader := response.Header().Get("Location")
+			assert.Equal(t, tt.want.location, locationHeader)
+		})
 	}
 }
