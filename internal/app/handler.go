@@ -46,9 +46,9 @@ func GetOrigPageRedir(res http.ResponseWriter, req *http.Request) {
 	// Get hash from GET request URL Path
 	hash := chi.URLParam(req, "id")
 	// Check if hash exists in idMap (aka original URL is stored)
-	origUrl, exists := idMap[hash]
+	origURL, exists := idMap[hash]
 	if exists {
-		res.Header().Set("Location", origUrl)
+		res.Header().Set("Location", origURL)
 		res.WriteHeader(http.StatusTemporaryRedirect)
 	} else {
 		res.WriteHeader(http.StatusBadRequest)
