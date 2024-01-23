@@ -88,7 +88,7 @@ func TestJSONShortURL(t *testing.T) {
 	}
 	tests := []struct {
 		name             string
-		locationJsonLink string
+		locationJSONLink string
 		headerValue      string
 		want             want
 	}{
@@ -113,8 +113,8 @@ func TestJSONShortURL(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			locationJsonLinkReader := strings.NewReader(tt.locationJsonLink)
-			request := httptest.NewRequest(http.MethodPost, "/api/shorten", locationJsonLinkReader)
+			locationJSONLinkReader := strings.NewReader(tt.locationJSONLink)
+			request := httptest.NewRequest(http.MethodPost, "/api/shorten", locationJSONLinkReader)
 			response := httptest.NewRecorder()
 
 			r := chi.NewRouter()

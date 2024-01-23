@@ -42,7 +42,7 @@ func PostShortURL(res http.ResponseWriter, req *http.Request) {
 	if err != nil {
 		handleError(res)
 	}
-	if !isUrl(url) {
+	if !isURL(url) {
 		handleError(res)
 		return
 	}
@@ -50,7 +50,7 @@ func PostShortURL(res http.ResponseWriter, req *http.Request) {
 	id := GenerateID(origURL)
 
 	// If ID does not exist - write that to idMap
-	checkIdMapForExistingId(id, origURL)
+	checkIDMapForExistingID(id, origURL)
 
 	// Generate a short link for user
 	shortURL := getShortenedLink(id)
@@ -87,7 +87,7 @@ func JSONShortURL(res http.ResponseWriter, req *http.Request) {
 	id := GenerateID(request.URL)
 
 	// If ID does not exist - write that to idMap
-	checkIdMapForExistingId(id, request.URL)
+	checkIDMapForExistingID(id, request.URL)
 
 	// Generate a short link for user
 	shortURL := getShortenedLink(id)
@@ -124,12 +124,12 @@ func GetOrigPageRedir(res http.ResponseWriter, req *http.Request) {
 }
 
 // Checks URL validity
-func isUrl(url *url.URL) bool {
+func isURL(url *url.URL) bool {
 	return url.Scheme != "" && url.Host != ""
 }
 
 // Checks if the ID is in storage
-func checkIdMapForExistingId(id, origURL string) {
+func checkIDMapForExistingID(id, origURL string) {
 	if _, exists := idMap[id]; !exists {
 		idMap[id] = origURL
 	}
