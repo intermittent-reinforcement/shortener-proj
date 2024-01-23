@@ -30,7 +30,7 @@ func toBase58(decNum []byte) string {
 	return string(encoded)
 }
 
-// Returns first idLen charecters of pre-hashed URL Base58 string
+// Returns first idLen characters of pre-hashed URL Base58 string
 func GenerateID(origURL string) string {
 	// Get SHA256 sum of user input URL string
 	hashedURL := hashURL(origURL)

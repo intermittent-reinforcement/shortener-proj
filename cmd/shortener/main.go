@@ -1,28 +1,28 @@
 package main
 
 import (
+	//"fmt"
 	"net/http"
-
+	//"os"
 
 	"github.com/go-chi/chi/v5"
-	"github.com/go-chi/chi/v5/middleware"
-	"github.com/intermittent-reinforcement/shortener-proj/internal/app"
+
+	"github.com/intermittent-reinforcement/shortener-proj/internal/app/config"
+	app "github.com/intermittent-reinforcement/shortener-proj/internal/app/handler"
 )
 
 func main() {
+
+	config.NewConfig()
+
 	r := chi.NewRouter()
 
-	r.Use(middleware.Logger)
-	r.Use(middleware.Recoverer)
-	r.NotFound(func(w http.ResponseWriter, r *http.Request) {
-		w.WriteHeader(404)
-		w.Write([]byte("route does not exist"))
-	})
-
 	r.Post("/", app.PostShortURL)
+	r.Post("/api/shorten", app.JSONShortURL)
 	r.Get("/{id}", app.GetOrigPageRedir)
 
-	err := http.ListenAndServe(`:8080`, r)
+	baseURL := config.URLConfig.ServerAddress.Value
+	err := http.ListenAndServe(baseURL, r)
 	if err != nil {
 		panic(err)
 	}

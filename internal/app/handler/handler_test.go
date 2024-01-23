@@ -2,9 +2,11 @@ package app
 
 import (
 	"bytes"
+	"fmt"
 	"io"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 
 	"github.com/go-chi/chi/v5"
@@ -38,6 +40,22 @@ func TestPostShortURL(t *testing.T) {
 				"http://localhost:8080/UwaF9CSP",
 			},
 		},
+		{
+			"Negative test #1",
+			"https://",
+			want{
+				400,
+				"",
+			},
+		},
+		{
+			"Negative test #2",
+			"/foo/bar",
+			want{
+				400,
+				"",
+			},
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.testName, func(t *testing.T) {
@@ -46,18 +64,77 @@ func TestPostShortURL(t *testing.T) {
 
 			r := chi.NewRouter()
 			r.Post("/", PostShortURL)
-
 			r.ServeHTTP(response, request)
 
 			result := response.Result()
 			assert.Equal(t, tt.want.code, result.StatusCode)
+			fmt.Println(result.Header)
 
 			defer result.Body.Close()
+
 			shortenedLinkTestResult, err := io.ReadAll(result.Body)
 			if err != nil {
 				t.Error(err)
 			}
 			assert.Equal(t, tt.want.shortLink, string(shortenedLinkTestResult))
+		})
+	}
+}
+
+func TestJSONShortURL(t *testing.T) {
+	type want struct {
+		code           int
+		jsonStringLink string
+	}
+	tests := []struct {
+		name             string
+		locationJsonLink string
+		headerValue      string
+		want             want
+	}{
+		{
+			"Positive test",
+			`{"url":"https://practicum.yandex.ru/"}`,
+			"application/json",
+			want{
+				201,
+				`{"result":"http://localhost:8080/UwaF9CSP"}`,
+			},
+		},
+		{
+			"Negative test with wrong JSON syntax",
+			`{"url":"https://practicum.yandex.ru/"`,
+			"application/json",
+			want{
+				400,
+				"",
+			},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			locationJsonLinkReader := strings.NewReader(tt.locationJsonLink)
+			request := httptest.NewRequest(http.MethodPost, "/api/shorten", locationJsonLinkReader)
+			response := httptest.NewRecorder()
+
+			r := chi.NewRouter()
+			r.Post("/api/shorten", JSONShortURL)
+			r.ServeHTTP(response, request)
+
+			result := response.Result()
+			assert.Equal(t, tt.want.code, result.StatusCode)
+
+			contentType := result.Header.Get("Content-Type")
+			assert.Equal(t, tt.headerValue, contentType)
+
+			defer result.Body.Close()
+
+			jsonShortLinkResult, err := io.ReadAll(result.Body)
+			if err != nil {
+				t.Error(err)
+			}
+			resultAsString := string(jsonShortLinkResult)
+			assert.Equal(t, tt.want.jsonStringLink, resultAsString)
 		})
 	}
 }
@@ -89,18 +166,31 @@ func TestGetOrigPageRedir(t *testing.T) {
 				"https://practicum.yandex.ru/",
 			},
 		},
+		{
+			"Negative test #1",
+			"",
+			want{
+				404,
+				"",
+			},
+		},
+		{
+			"Negative test #2",
+			"testFails",
+			want{
+				400,
+				"",
+			},
+		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.testName, func(t *testing.T) {
-			idMap = make(map[string]string)
-			idMap[tt.id] = tt.want.location
 			request := httptest.NewRequest(http.MethodGet, "http://localhost:8080/"+tt.id, nil)
 			response := httptest.NewRecorder()
 
 			r := chi.NewRouter()
 			r.Get("/{id}", GetOrigPageRedir)
-
 			r.ServeHTTP(response, request)
 
 			result := response.Result()
