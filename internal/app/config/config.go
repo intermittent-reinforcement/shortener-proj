@@ -36,7 +36,7 @@ var URLConfig Config = Config{
 
 func NewConfig() {
 
-	configFlags := flag.NewFlagSet("Config flagset", flag.ExitOnError)
+	configFlags := flag.NewFlagSet("Config flagset", flag.ContinueOnError)
 
 	serverAddress := getServerAddr(configFlags)
 	baseURL := getBaseURL(configFlags)
@@ -54,7 +54,7 @@ func getServerAddr(flags *flag.FlagSet) *string {
 	if addr := os.Getenv(serverAddressEnv); addr != "" {
 		serverAddr = &addr
 	} else {
-		serverAddr = flag.String(URLConfig.ServerAddress.FlagName, URLConfig.ServerAddress.Value, URLConfig.BaseURL.Name)
+		serverAddr = flags.String(URLConfig.ServerAddress.FlagName, URLConfig.ServerAddress.Value, URLConfig.BaseURL.Name)
 	}
 	return serverAddr
 }
@@ -64,7 +64,7 @@ func getBaseURL(flags *flag.FlagSet) *string {
 	if url := os.Getenv(baseURLEnv); url != "" {
 		baseURL = &url
 	} else {
-		baseURL = flag.String(URLConfig.BaseURL.FlagName, URLConfig.BaseURL.Value, URLConfig.BaseURL.Name)
+		baseURL = flags.String(URLConfig.BaseURL.FlagName, URLConfig.BaseURL.Value, URLConfig.BaseURL.Name)
 	}
 	return baseURL
 }
