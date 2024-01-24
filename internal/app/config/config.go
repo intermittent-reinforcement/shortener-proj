@@ -68,12 +68,3 @@ func getBaseURL(flags *flag.FlagSet) *string {
 	}
 	return baseURL
 }
-
-func (o *Option) String() string {
-	return o.Value
-}
-
-func (o *Option) Set(s string) error {
-	o.Value = s
-	return nil
-}
