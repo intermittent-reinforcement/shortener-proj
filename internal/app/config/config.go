@@ -6,8 +6,8 @@ import (
 )
 
 const (
-	serverAdressEnv = "SERVER_ADDRESS"
-	baseURLEnv      = "BASE_URL"
+	serverAddressEnv = "SERVER_ADDRESS"
+	baseURLEnv       = "BASE_URL"
 )
 
 type Option struct {
@@ -23,7 +23,7 @@ type Config struct {
 
 var URLConfig Config = Config{
 	Option{
-		"Server adress",
+		"Server address",
 		"a",
 		"localhost:8080",
 	},
@@ -51,7 +51,7 @@ func NewConfig() {
 
 func getServerAddr(flags *flag.FlagSet) *string {
 	var serverAddr *string
-	if addr := os.Getenv(serverAdressEnv); addr != "" {
+	if addr := os.Getenv(serverAddressEnv); addr != "" {
 		serverAddr = &addr
 	} else {
 		serverAddr = flag.String(URLConfig.ServerAddress.FlagName, URLConfig.ServerAddress.Value, URLConfig.BaseURL.Name)
@@ -67,4 +67,13 @@ func getBaseURL(flags *flag.FlagSet) *string {
 		baseURL = flag.String(URLConfig.BaseURL.FlagName, URLConfig.BaseURL.Value, URLConfig.BaseURL.Name)
 	}
 	return baseURL
+}
+
+func (o *Option) String() string {
+	return o.Value
+}
+
+func (o *Option) Set(s string) error {
+	o.Value = s
+	return nil
 }
