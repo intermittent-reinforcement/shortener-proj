@@ -1,4 +1,4 @@
-package app
+package idgen
 
 import (
 	"crypto/sha256"

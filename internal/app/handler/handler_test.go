@@ -1,8 +1,7 @@
-package app
+package handler
 
 import (
 	"bytes"
-	"fmt"
 	"io"
 	"net/http"
 	"net/http/httptest"
@@ -68,7 +67,6 @@ func TestPostShortURL(t *testing.T) {
 
 			result := response.Result()
 			assert.Equal(t, tt.want.code, result.StatusCode)
-			fmt.Println(result.Header)
 
 			defer result.Body.Close()
 

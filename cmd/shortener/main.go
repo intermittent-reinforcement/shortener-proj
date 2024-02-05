@@ -1,14 +1,13 @@
 package main
 
 import (
-	//"fmt"
+	"log"
 	"net/http"
-	//"os"
 
 	"github.com/go-chi/chi/v5"
 
 	"github.com/intermittent-reinforcement/shortener-proj/internal/app/config"
-	app "github.com/intermittent-reinforcement/shortener-proj/internal/app/handler"
+	"github.com/intermittent-reinforcement/shortener-proj/internal/app/handler"
 )
 
 func main() {
@@ -17,13 +16,13 @@ func main() {
 
 	r := chi.NewRouter()
 
-	r.Post("/", app.PostShortURL)
-	r.Post("/api/shorten", app.JSONShortURL)
-	r.Get("/{id}", app.GetOrigPageRedir)
+	r.Post("/", handler.PostShortURL)
+	r.Post("/api/shorten", handler.JSONShortURL)
+	r.Get("/{id}", handler.GetOrigPageRedir)
 
 	baseURL := config.URLConfig.ServerAddress.Value
 	err := http.ListenAndServe(baseURL, r)
 	if err != nil {
-		panic(err)
+		log.Fatal(err)
 	}
 }

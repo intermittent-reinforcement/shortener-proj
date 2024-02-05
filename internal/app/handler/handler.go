@@ -1,4 +1,4 @@
-package app
+package handler
 
 import (
 	"encoding/json"
@@ -7,6 +7,8 @@ import (
 	"net/url"
 
 	"github.com/intermittent-reinforcement/shortener-proj/internal/app/config"
+	"github.com/intermittent-reinforcement/shortener-proj/internal/app/idgen"
+	"github.com/intermittent-reinforcement/shortener-proj/internal/app/storage"
 
 	"github.com/go-chi/chi/v5"
 )
@@ -20,11 +22,9 @@ type ShortenResponse struct {
 	Result string `json:"result"`
 }
 
-// Storage for hashes
-var idMap = make(map[string]string)
+var idMap = storage.NewURLStorage()
 
 func PostShortURL(res http.ResponseWriter, req *http.Request) {
-
 	// Set HTTP header
 	res.Header().Set("Content-Type", "text/plain")
 
@@ -34,7 +34,7 @@ func PostShortURL(res http.ResponseWriter, req *http.Request) {
 		handleError(res)
 		return
 	}
-	defer req.Body.Close()
+
 	origURL := string(bodyURL)
 
 	// Verify Original URL validity
@@ -47,10 +47,10 @@ func PostShortURL(res http.ResponseWriter, req *http.Request) {
 		return
 	}
 	// Get ID for original URL
-	id := GenerateID(origURL)
+	id := idgen.GenerateID(origURL)
 
 	// If ID does not exist - write that to idMap
-	checkIDMapForExistingID(id, origURL)
+	idMap.Add(id, origURL)
 
 	// Generate a short link for user
 	shortURL := getShortenedLink(id)
@@ -76,18 +76,27 @@ func JSONShortURL(res http.ResponseWriter, req *http.Request) {
 		handleError(res)
 		return
 	}
-	defer req.Body.Close()
 
 	// Unmarshall URL
 	if err := json.Unmarshal(body, &request); err != nil {
 		handleError(res)
 		return
 	}
+
+	// Verify Original URL validity
+	url, err := url.ParseRequestURI(request.URL)
+	if err != nil {
+		handleError(res)
+	}
+	if !isURL(url) {
+		handleError(res)
+		return
+	}
 	// Get ID for original URL
-	id := GenerateID(request.URL)
+	id := idgen.GenerateID(request.URL)
 
 	// If ID does not exist - write that to idMap
-	checkIDMapForExistingID(id, request.URL)
+	idMap.Add(id, request.URL)
 
 	// Generate a short link for user
 	shortURL := getShortenedLink(id)
@@ -112,13 +121,11 @@ func GetOrigPageRedir(res http.ResponseWriter, req *http.Request) {
 	hash := chi.URLParam(req, "id")
 
 	// Check if hash exists in idMap (aka original URL is stored)
-	origURL, exists := idMap[hash]
-
+	origURL, exists := idMap.Get(hash)
 	if exists {
 		res.Header().Set("Location", origURL)
 		res.WriteHeader(http.StatusTemporaryRedirect)
 	} else {
-		//res.WriteHeader(http.StatusNotFound)
 		handleError(res)
 	}
 }
@@ -126,13 +133,6 @@ func GetOrigPageRedir(res http.ResponseWriter, req *http.Request) {
 // Checks URL validity
 func isURL(url *url.URL) bool {
 	return url.Scheme != "" && url.Host != ""
-}
-
-// Checks if the ID is in storage
-func checkIDMapForExistingID(id, origURL string) {
-	if _, exists := idMap[id]; !exists {
-		idMap[id] = origURL
-	}
 }
 
 func handleError(res http.ResponseWriter) {
