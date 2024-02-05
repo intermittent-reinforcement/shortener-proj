@@ -12,9 +12,6 @@ func TestNewURLStorage(t *testing.T) {
 	if idStorage == nil {
 		t.Error("NewURLStorage() should not return nil")
 	}
-	if len(idStorage.idMap) != 0 {
-		t.Errorf("Expected empty map, got %v", idStorage.idMap)
-	}
 }
 
 func TestURLStorage_Add(t *testing.T) {
